@@ -44,6 +44,7 @@ Backend Express.js (ESM) untuk sistem perizinan siswa berbasis role.
   - `GET /api/v1/security/scan/:token`
   - `PATCH /api/v1/security/permissions/:id/return`
   - `PATCH /api/v1/security/permissions/:id/no-return`
+  - `PATCH /api/v1/security/permissions/:id/reopen`
 - Kelas:
   - `GET /api/v1/classes`
   - `GET /api/v1/classes/students`

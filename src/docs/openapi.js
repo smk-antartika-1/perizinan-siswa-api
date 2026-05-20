@@ -484,7 +484,7 @@ export const openApiSpec = {
     "/api/v1/security/permissions/{id}/return": {
       patch: {
         tags: ["Security"],
-        summary: "Mark student has returned",
+        summary: "Mark student has returned (guru piket, security, admin)",
         security: authSecurity,
         parameters: [uuidPathParam()],
         responses: { 200: { description: "Success" } },
@@ -493,7 +493,16 @@ export const openApiSpec = {
     "/api/v1/security/permissions/{id}/no-return": {
       patch: {
         tags: ["Security"],
-        summary: "Mark student will not return",
+        summary: "Mark student will not return (guru piket, security, admin)",
+        security: authSecurity,
+        parameters: [uuidPathParam()],
+        responses: { 200: { description: "Success" } },
+      },
+    },
+    "/api/v1/security/permissions/{id}/reopen": {
+      patch: {
+        tags: ["Security"],
+        summary: "Reopen returned/no-return permission back to active",
         security: authSecurity,
         parameters: [uuidPathParam()],
         responses: { 200: { description: "Success" } },
@@ -570,7 +579,8 @@ export const openApiSpec = {
     "/api/v1/reports/entry-exit/export.xlsx": {
       get: {
         tags: ["Reports"],
-        summary: "Export entry/exit report as Excel",
+        summary:
+          "Export entry/exit report as Excel (guru piket, security, admin)",
         security: authSecurity,
         responses: {
           200: {

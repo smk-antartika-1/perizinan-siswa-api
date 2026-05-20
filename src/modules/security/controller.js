@@ -118,6 +118,32 @@ export async function markReturned(req, res, next) {
   }
 }
 
+export async function reopenPermission(req, res, next) {
+  try {
+    const permission = await db("permissions")
+      .where({ id: req.params.id })
+      .first();
+    if (!permission)
+      return next({ status: 404, message: "Perizinan tidak ditemukan" });
+    await db("permissions").where({ id: permission.id }).update({
+      status: "approved_piket",
+      actual_return_time: null,
+      will_not_return: false,
+      updated_at: new Date(),
+    });
+    await db("entry_exit_logs").insert({
+      permission_id: permission.id,
+      student_user_id: permission.student_user_id,
+      class_id: permission.class_id,
+      action: "kepulangan_dibatalkan",
+      acted_by_user_id: req.user.id,
+    });
+    res.json({ message: "Status perizinan dibuka kembali" });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function markNoReturn(req, res, next) {
   try {
     const permission = await db("permissions")

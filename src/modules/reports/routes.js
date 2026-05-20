@@ -4,7 +4,17 @@ import { entryExitReport, exportEntryExitXlsx } from "./controller.js";
 
 const router = Router();
 
-router.get("/entry-exit", requireAuth, requireRoles("guru_piket", "security", "admin"), entryExitReport);
-router.get("/entry-exit/export.xlsx", requireAuth, requireRoles("guru_piket", "admin"), exportEntryExitXlsx);
+router.get(
+  "/entry-exit",
+  requireAuth,
+  requireRoles("guru_piket", "security", "admin"),
+  entryExitReport,
+);
+router.get(
+  "/entry-exit/export.xlsx",
+  requireAuth,
+  requireRoles("guru_piket", "security", "admin"),
+  exportEntryExitXlsx,
+);
 
 export default router;

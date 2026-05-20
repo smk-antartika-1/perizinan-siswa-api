@@ -1,11 +1,26 @@
 import { db } from "../../config/db.js";
 
 export async function getProfile(req, res) {
-  const profile = await db("student_profiles")
-    .leftJoin("classes", "classes.id", "student_profiles.class_id")
-    .select("student_profiles.nopol", "classes.name as class_name")
-    .where("student_profiles.user_id", req.user.id)
-    .first();
+  let className = null;
+  let nopol = null;
+
+  if (req.user.role === "siswa") {
+    const profile = await db("student_profiles")
+      .leftJoin("classes", "classes.id", "student_profiles.class_id")
+      .select("student_profiles.nopol", "classes.name as class_name")
+      .where("student_profiles.user_id", req.user.id)
+      .first();
+    className = profile?.class_name || null;
+    nopol = profile?.nopol || null;
+  } else if (req.user.role === "wali_kelas") {
+    const homeroom = await db("class_homeroom_teachers")
+      .join("classes", "classes.id", "class_homeroom_teachers.class_id")
+      .select("classes.name as class_name")
+      .where("class_homeroom_teachers.teacher_user_id", req.user.id)
+      .first();
+    className = homeroom?.class_name || null;
+  }
+
   res.json({
     id: req.user.id,
     name: req.user.name,
@@ -15,8 +30,8 @@ export async function getProfile(req, res) {
     nis: req.user.nis,
     nip: req.user.nip,
     avatarUrl: req.user.avatar_url,
-    className: profile?.class_name || null,
-    nopol: profile?.nopol || null,
+    className,
+    nopol,
   });
 }
 

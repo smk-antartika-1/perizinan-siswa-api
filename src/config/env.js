@@ -27,5 +27,5 @@ export const env = {
   refreshTokenTtlDays: Number(process.env.JWT_REFRESH_TTL_DAYS || 14),
   qrTokenTtlMinutes: Number(process.env.QR_TOKEN_TTL_MINUTES || 30),
   uploadDir: process.env.UPLOAD_DIR || "uploads",
-  appUrl: process.env.APP_URL || "http://localhost:8000",
+  appUrl: process.env.APP_URL || "http://127.0.0.1:8000",
 };

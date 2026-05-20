@@ -484,12 +484,13 @@ export async function getPermissionSurat(req, res, next) {
       return next({ status: 404, message: "Perizinan tidak ditemukan" });
     const permission = await serializePermission(row, false);
     const safePermissionId = escapeXml(permission.id);
+    const displayId = escapeXml(permission.id.split('-')[0].toUpperCase());
     const safeStatus = escapeXml(permission.status.toUpperCase());
     const safeStudentName = escapeXml(permission.studentName);
     const safeKelas = escapeXml(permission.kelas || "-");
     const safeReason = escapeXml(String(permission.reason).slice(0, 88));
     const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 720 480">
         <rect width="720" height="480" fill="#ffffff" rx="18"/>
         <rect x="0" y="0" width="720" height="72" fill="#2563eb" rx="18"/>
         <rect x="0" y="18" width="720" height="54" fill="#2563eb"/>
@@ -497,7 +498,7 @@ export async function getPermissionSurat(req, res, next) {
         <text x="360" y="112" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#64748b">E-Izin Siswa - Sistem Perizinan Digital</text>
         <line x1="48" y1="136" x2="672" y2="136" stroke="#e2e8f0" stroke-width="1"/>
         <text x="48" y="170" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">ID PERIZINAN</text>
-        <text x="48" y="194" font-family="monospace" font-size="18" font-weight="bold" fill="#1e293b">${safePermissionId}</text>
+        <text x="48" y="194" font-family="monospace" font-size="18" font-weight="bold" fill="#1e293b">${displayId}</text>
         <text x="360" y="170" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">STATUS</text>
         <text x="360" y="194" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#16a34a">${safeStatus}</text>
         <line x1="48" y1="218" x2="672" y2="218" stroke="#e2e8f0" stroke-width="1"/>
@@ -511,7 +512,7 @@ export async function getPermissionSurat(req, res, next) {
         <text x="48" y="418" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">DIVERIFIKASI OLEH SISTEM</text>
         <text x="48" y="442" font-family="Arial, sans-serif" font-size="14" fill="#334155">Guru Piket / Wali Kelas</text>
         <rect x="492" y="400" width="180" height="48" fill="#f1f5f9" rx="8"/>
-        <text x="582" y="430" text-anchor="middle" font-family="monospace" font-size="12" font-weight="bold" fill="#2563eb">${safePermissionId}</text>
+        <text x="582" y="430" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#2563eb">${displayId}</text>
       </svg>
     `;
     res.setHeader("Content-Type", "image/svg+xml");

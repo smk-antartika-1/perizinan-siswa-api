@@ -12,7 +12,12 @@ import { openApiSpec } from "./docs/openapi.js";
 
 const app = express();
 
-app.use(helmet());
+app.use(
+  helmet({
+    hsts: env.nodeEnv === "production",
+    crossOriginResourcePolicy: false,
+  })
+);
 app.use(cors());
 app.use(morgan("dev"));
 app.use(express.json({ limit: "2mb" }));

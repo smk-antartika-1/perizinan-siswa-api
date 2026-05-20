@@ -2,10 +2,16 @@ import bcrypt from "bcryptjs";
 import { db } from "../../config/db.js";
 import { env } from "../../config/env.js";
 import { sha256 } from "../../utils/security.js";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../../utils/tokens.js";
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../../utils/tokens.js";
 
 async function storeRefreshToken(userId, token) {
-  const expiresAt = new Date(Date.now() + env.refreshTokenTtlDays * 24 * 3600 * 1000);
+  const expiresAt = new Date(
+    Date.now() + env.refreshTokenTtlDays * 24 * 3600 * 1000,
+  );
   await db("refresh_tokens").insert({
     user_id: userId,
     token_hash: sha256(token),
@@ -19,6 +25,7 @@ function sanitizeUser(user) {
     name: user.name,
     role: user.role,
     username: user.username,
+    email: user.email,
     nis: user.nis,
     nip: user.nip,
     mustChangePassword: user.must_change_password,
@@ -28,8 +35,11 @@ function sanitizeUser(user) {
 export async function login(req, res, next) {
   try {
     const { username, password } = req.validated.body;
-    const user = await db("users").whereRaw("lower(username) = lower(?)", [username]).first();
-    if (!user || !user.is_active) return next({ status: 401, message: "Username/password salah" });
+    const user = await db("users")
+      .whereRaw("lower(username) = lower(?)", [username])
+      .first();
+    if (!user || !user.is_active)
+      return next({ status: 401, message: "Username/password salah" });
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return next({ status: 401, message: "Username/password salah" });
     const accessToken = signAccessToken(user);
@@ -44,16 +54,22 @@ export async function login(req, res, next) {
 export async function refresh(req, res, next) {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) return next({ status: 400, message: "refreshToken wajib" });
+    if (!refreshToken)
+      return next({ status: 400, message: "refreshToken wajib" });
     const payload = verifyRefreshToken(refreshToken);
     const tokenHash = sha256(refreshToken);
     const saved = await db("refresh_tokens")
       .where({ user_id: payload.sub, token_hash: tokenHash, revoked_at: null })
       .andWhere("expires_at", ">", new Date())
       .first();
-    if (!saved) return next({ status: 401, message: "Refresh token tidak valid" });
-    await db("refresh_tokens").where({ id: saved.id }).update({ revoked_at: new Date() });
-    const user = await db("users").where({ id: payload.sub, is_active: true }).first();
+    if (!saved)
+      return next({ status: 401, message: "Refresh token tidak valid" });
+    await db("refresh_tokens")
+      .where({ id: saved.id })
+      .update({ revoked_at: new Date() });
+    const user = await db("users")
+      .where({ id: payload.sub, is_active: true })
+      .first();
     if (!user) return next({ status: 401, message: "User tidak ditemukan" });
     const newAccess = signAccessToken(user);
     const newRefresh = signRefreshToken(user.id);
@@ -86,7 +102,8 @@ export async function changePassword(req, res, next) {
   try {
     const { oldPassword, newPassword } = req.validated.body;
     const ok = await bcrypt.compare(oldPassword, req.user.password_hash);
-    if (!ok) return next({ status: 400, message: "Password lama tidak sesuai" });
+    if (!ok)
+      return next({ status: 400, message: "Password lama tidak sesuai" });
     const passwordHash = await bcrypt.hash(newPassword, 10);
     await db("users").where({ id: req.user.id }).update({
       password_hash: passwordHash,

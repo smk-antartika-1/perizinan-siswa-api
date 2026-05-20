@@ -31,8 +31,11 @@ Backend Express.js (ESM) untuk sistem perizinan siswa berbasis role.
   - `POST /api/v1/permissions`
   - `GET /api/v1/permissions`
   - `GET /api/v1/permissions/:id`
+  - `GET /api/v1/permissions/:id/surat`
+  - `POST /api/v1/permissions/:id/comments`
   - `PATCH /api/v1/permissions/:id/wali-approve`
   - `PATCH /api/v1/permissions/:id/piket-approve`
+  - `PATCH /api/v1/permissions/:id/bypass-approve`
   - `PATCH /api/v1/permissions/:id/reject`
   - `POST /api/v1/permissions/:id/document`
   - `POST /api/v1/permissions/:id/qr`
@@ -42,11 +45,25 @@ Backend Express.js (ESM) untuk sistem perizinan siswa berbasis role.
   - `PATCH /api/v1/security/permissions/:id/return`
   - `PATCH /api/v1/security/permissions/:id/no-return`
 - Kelas:
+  - `GET /api/v1/classes`
   - `GET /api/v1/classes/students`
+- Students:
+  - `GET /api/v1/students/:nis`
+- Notifications:
+  - `GET /api/v1/notifications`
+  - `PATCH /api/v1/notifications/:id/read`
+  - `PATCH /api/v1/notifications/read-all`
 - Laporan:
   - `GET /api/v1/reports/entry-exit`
   - `GET /api/v1/reports/entry-exit/export.xlsx`
 - Admin:
+  - `GET /api/v1/admin/users`
+  - `POST /api/v1/admin/users`
+  - `PATCH /api/v1/admin/users/:id`
+  - `DELETE /api/v1/admin/users/:id`
+  - `GET /api/v1/admin/users/export.csv`
+  - `GET /api/v1/admin/import-template.csv?role=siswa`
+  - `POST /api/v1/admin/users/import.xlsx?role=siswa`
   - `POST /api/v1/admin/students/import.xlsx`
 
 ## Kredensial seed

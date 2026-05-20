@@ -4,9 +4,11 @@ import bcrypt from "bcryptjs";
  * @param {import("knex").Knex} knex
  */
 export async function seed(knex) {
+  await knex("notifications").del();
   await knex("entry_exit_logs").del();
   await knex("permission_qr_tokens").del();
   await knex("permission_documents").del();
+  await knex("permission_comments").del();
   await knex("permission_approvals").del();
   await knex("permissions").del();
   await knex("class_homeroom_teachers").del();
@@ -24,10 +26,34 @@ export async function seed(knex) {
 
   const [wali, piket, security, admin, siswa] = await knex("users")
     .insert([
-      { role: "wali_kelas", username: "NIP001", password_hash: pass, name: "Ibu Ratna", nip: "NIP001" },
-      { role: "guru_piket", username: "NIP002", password_hash: pass, name: "Pak Andi", nip: "NIP002" },
-      { role: "security", username: "SEC001", password_hash: pass, name: "Pak Slamet", nip: "SEC001" },
-      { role: "admin", username: "ADM001", password_hash: pass, name: "Admin IT", nip: "ADM001" },
+      {
+        role: "wali_kelas",
+        username: "NIP001",
+        password_hash: pass,
+        name: "Ibu Ratna",
+        nip: "NIP001",
+      },
+      {
+        role: "guru_piket",
+        username: "NIP002",
+        password_hash: pass,
+        name: "Pak Andi",
+        nip: "NIP002",
+      },
+      {
+        role: "security",
+        username: "SEC001",
+        password_hash: pass,
+        name: "Pak Slamet",
+        nip: "SEC001",
+      },
+      {
+        role: "admin",
+        username: "ADM001",
+        password_hash: pass,
+        name: "Admin IT",
+        nip: "ADM001",
+      },
       {
         role: "siswa",
         username: "2024001",

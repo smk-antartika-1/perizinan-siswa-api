@@ -6,6 +6,8 @@ import securityRoutes from "./modules/security/routes.js";
 import classRoutes from "./modules/classes/routes.js";
 import reportRoutes from "./modules/reports/routes.js";
 import adminRoutes from "./modules/admin/routes.js";
+import notificationRoutes from "./modules/notifications/routes.js";
+import studentRoutes from "./modules/students/routes.js";
 
 const router = Router();
 
@@ -17,5 +19,7 @@ router.use("/security", securityRoutes);
 router.use("/classes", classRoutes);
 router.use("/reports", reportRoutes);
 router.use("/admin", adminRoutes);
+router.use("/notifications", notificationRoutes);
+router.use("/students", studentRoutes);
 
 export default router;

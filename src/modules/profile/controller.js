@@ -11,6 +11,7 @@ export async function getProfile(req, res) {
     name: req.user.name,
     role: req.user.role,
     username: req.user.username,
+    email: req.user.email,
     nis: req.user.nis,
     nip: req.user.nip,
     avatarUrl: req.user.avatar_url,
@@ -23,9 +24,12 @@ export async function updateProfile(req, res, next) {
   try {
     const updates = {};
     if (req.file) updates.avatar_url = req.file.filename;
-    if (Object.keys(updates).length > 0) await db("users").where({ id: req.user.id }).update(updates);
+    if (Object.keys(updates).length > 0)
+      await db("users").where({ id: req.user.id }).update(updates);
     if (req.user.role === "siswa" && typeof req.body.nopol === "string") {
-      await db("student_profiles").where({ user_id: req.user.id }).update({ nopol: req.body.nopol });
+      await db("student_profiles")
+        .where({ user_id: req.user.id })
+        .update({ nopol: req.body.nopol });
     }
     res.json({ message: "Profil berhasil diperbarui" });
   } catch (err) {

@@ -7,6 +7,12 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../../utils/tokens.js";
+import {
+  clearAuthCookies,
+  readRefreshToken,
+  setAuthCookies,
+  withoutTokenPayload,
+} from "./cookies.js";
 
 async function storeRefreshToken(userId, token) {
   const expiresAt = new Date(
@@ -45,7 +51,8 @@ export async function login(req, res, next) {
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user.id);
     await storeRefreshToken(user.id, refreshToken);
-    res.json({ user: sanitizeUser(user), accessToken, refreshToken });
+    setAuthCookies(res, { accessToken, refreshToken });
+    res.json(withoutTokenPayload({ user: sanitizeUser(user), accessToken, refreshToken }));
   } catch (err) {
     next(err);
   }
@@ -53,7 +60,7 @@ export async function login(req, res, next) {
 
 export async function refresh(req, res, next) {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = readRefreshToken(req);
     if (!refreshToken)
       return next({ status: 400, message: "refreshToken wajib" });
     const payload = verifyRefreshToken(refreshToken);
@@ -74,7 +81,8 @@ export async function refresh(req, res, next) {
     const newAccess = signAccessToken(user);
     const newRefresh = signRefreshToken(user.id);
     await storeRefreshToken(user.id, newRefresh);
-    res.json({ accessToken: newAccess, refreshToken: newRefresh });
+    setAuthCookies(res, { accessToken: newAccess, refreshToken: newRefresh });
+    res.json(withoutTokenPayload({ accessToken: newAccess, refreshToken: newRefresh }));
   } catch {
     next({ status: 401, message: "Refresh token tidak valid" });
   }
@@ -82,12 +90,13 @@ export async function refresh(req, res, next) {
 
 export async function logout(req, res, next) {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = readRefreshToken(req);
     if (refreshToken) {
       await db("refresh_tokens")
         .where({ token_hash: sha256(refreshToken), revoked_at: null })
         .update({ revoked_at: new Date() });
     }
+    clearAuthCookies(res);
     res.json({ message: "Logout berhasil" });
   } catch (err) {
     next(err);

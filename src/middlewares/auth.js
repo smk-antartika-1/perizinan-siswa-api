@@ -1,9 +1,9 @@
 import { db } from "../config/db.js";
 import { verifyAccessToken } from "../utils/tokens.js";
+import { readAccessToken } from "../modules/auth/cookies.js";
 
 export async function requireAuth(req, _res, next) {
-  const auth = req.headers.authorization || "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  const token = readAccessToken(req);
   if (!token) return next({ status: 401, message: "Unauthorized" });
   try {
     const payload = verifyAccessToken(token);

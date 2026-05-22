@@ -1,11 +1,16 @@
 import { db } from "../../config/db.js";
 import { env } from "../../config/env.js";
 import { sha256, signQrToken } from "../../utils/security.js";
+import {
+  getPermissionExpiry,
+  isPermissionExpired,
+} from "../../utils/permissions.js";
 
 const STATUS_TO_FRONTEND = {
   pending_wali: "pending",
   approved_wali: "approved_wali",
   approved_piket: "approved_piket",
+  expired: "expired",
   rejected: "rejected",
   completed: "completed",
   closed_no_return: "completed",
@@ -128,6 +133,8 @@ async function serializePermission(row, includeExtras = true) {
   const extras = includeExtras
     ? await getPermissionExtras(row.id)
     : { comments: [], approvals: [] };
+  const expiresAt = getPermissionExpiry(row);
+  const expired = isPermissionExpired(row);
   const auditLog = [
     {
       id: `${row.id}-created`,
@@ -160,6 +167,8 @@ async function serializePermission(row, includeExtras = true) {
     actualReturnTime: row.actual_return_time,
     status: STATUS_TO_FRONTEND[row.status] || row.status,
     rawStatus: row.status,
+    expiresAt: expiresAt ? expiresAt.toISOString() : null,
+    isExpired: expired,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     rejectedReason: row.rejected_reason,
@@ -480,11 +489,11 @@ export async function getPermissionSurat(req, res, next) {
     const row = await basePermissionQuery()
       .where("p.id", req.params.id)
       .first();
-    if (!row)
-      return next({ status: 404, message: "Perizinan tidak ditemukan" });
+    if (!row) return res.sendStatus(404);
+    if (row.status !== "approved_piket") return res.sendStatus(403);
+    const expiresAt = getPermissionExpiry(row);
+    if (expiresAt && new Date() > expiresAt) return res.sendStatus(403);
     const permission = await serializePermission(row, false);
-    const safePermissionId = escapeXml(permission.id);
-    const displayId = escapeXml(permission.id.split('-')[0].toUpperCase());
     const safeStatus = escapeXml(permission.status.toUpperCase());
     const safeStudentName = escapeXml(permission.studentName);
     const safeKelas = escapeXml(permission.kelas || "-");
@@ -497,8 +506,8 @@ export async function getPermissionSurat(req, res, next) {
         <text x="360" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">SURAT IZIN KELUAR SISWA</text>
         <text x="360" y="112" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#64748b">E-Izin Siswa - Sistem Perizinan Digital</text>
         <line x1="48" y1="136" x2="672" y2="136" stroke="#e2e8f0" stroke-width="1"/>
-        <text x="48" y="170" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">ID PERIZINAN</text>
-        <text x="48" y="194" font-family="monospace" font-size="18" font-weight="bold" fill="#1e293b">${displayId}</text>
+        <text x="48" y="170" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">DOKUMEN</text>
+        <text x="48" y="194" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#1e293b">TIKET PERIZINAN</text>
         <text x="360" y="170" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">STATUS</text>
         <text x="360" y="194" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#16a34a">${safeStatus}</text>
         <line x1="48" y1="218" x2="672" y2="218" stroke="#e2e8f0" stroke-width="1"/>
@@ -512,7 +521,7 @@ export async function getPermissionSurat(req, res, next) {
         <text x="48" y="418" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">DIVERIFIKASI OLEH SISTEM</text>
         <text x="48" y="442" font-family="Arial, sans-serif" font-size="14" fill="#334155">Guru Piket / Wali Kelas</text>
         <rect x="492" y="400" width="180" height="48" fill="#f1f5f9" rx="8"/>
-        <text x="582" y="430" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#2563eb">${displayId}</text>
+        <text x="582" y="430" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2563eb">VALID</text>
       </svg>
     `;
     res.setHeader("Content-Type", "image/svg+xml");

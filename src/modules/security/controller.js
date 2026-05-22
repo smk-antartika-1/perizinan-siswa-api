@@ -1,6 +1,7 @@
 import { db } from "../../config/db.js";
 import { env } from "../../config/env.js";
 import { sha256, verifyQrToken } from "../../utils/security.js";
+import { isPermissionExpired } from "../../utils/permissions.js";
 
 async function notifyUsers(userIds, payload) {
   const uniqueIds = [...new Set(userIds.filter(Boolean))];
@@ -74,6 +75,12 @@ export async function scanQr(req, res, next) {
       .first();
     if (!permission)
       return next({ status: 404, message: "Perizinan tidak ditemukan" });
+    if (
+      permission.status !== "approved_piket" ||
+      isPermissionExpired(permission)
+    ) {
+      return next({ status: 403, message: "Perizinan tidak aktif/expired" });
+    }
     const documentUrl = permission.file_path
       ? `${env.appUrl}/uploads/${permission.file_path}`
       : null;

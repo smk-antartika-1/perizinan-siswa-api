@@ -9,23 +9,30 @@ import {
 
 const router = Router();
 
+export const RETURN_MANAGEMENT_ROLES = [
+  "guru_piket",
+  "security",
+  "wali_kelas",
+  "admin",
+];
+
 router.get("/scan/:token", scanQr);
 router.patch(
   "/permissions/:id/return",
   requireAuth,
-  requireRoles("guru_piket", "security", "admin"),
+  requireRoles(...RETURN_MANAGEMENT_ROLES),
   markReturned,
 );
 router.patch(
   "/permissions/:id/no-return",
   requireAuth,
-  requireRoles("guru_piket", "security", "admin"),
+  requireRoles(...RETURN_MANAGEMENT_ROLES),
   markNoReturn,
 );
 router.patch(
   "/permissions/:id/reopen",
   requireAuth,
-  requireRoles("guru_piket", "security", "admin"),
+  requireRoles(...RETURN_MANAGEMENT_ROLES),
   reopenPermission,
 );
 

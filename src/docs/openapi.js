@@ -663,10 +663,10 @@ export const openApiSpec = {
         responses: { 200: { description: "Success" } },
       },
     },
-    "/api/v1/admin/users/export.csv": {
+    "/api/v1/admin/users/export.xlsx": {
       get: {
         tags: ["Admin"],
-        summary: "Export users CSV",
+        summary: "Export users XLSX",
         security: authSecurity,
         parameters: [
           {
@@ -677,25 +677,29 @@ export const openApiSpec = {
         ],
         responses: {
           200: {
-            description: "CSV file",
+            description: "XLSX file",
             content: {
-              "text/csv": { schema: { type: "string", format: "binary" } },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                schema: { type: "string", format: "binary" },
+              },
             },
           },
         },
       },
     },
-    "/api/v1/admin/import-template.csv": {
+    "/api/v1/admin/import-template.xlsx": {
       get: {
         tags: ["Admin"],
-        summary: "Download per-role import CSV template",
+        summary: "Download per-role import XLSX template",
         security: authSecurity,
         parameters: [{ in: "query", name: "role", schema: roleSchema }],
         responses: {
           200: {
-            description: "CSV template",
+            description: "XLSX template",
             content: {
-              "text/csv": { schema: { type: "string", format: "binary" } },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                schema: { type: "string", format: "binary" },
+              },
             },
           },
         },
@@ -719,6 +723,26 @@ export const openApiSpec = {
           },
         },
         responses: { 200: { description: "Import completed" } },
+      },
+    },
+    "/api/v1/admin/users/import-preview.xlsx": {
+      post: {
+        tags: ["Admin"],
+        summary: "Preview users from Excel by role without importing",
+        security: authSecurity,
+        parameters: [{ in: "query", name: "role", schema: roleSchema }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: { file: { type: "string", format: "binary" } },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: "Import preview rows" } },
       },
     },
     "/api/v1/admin/students/import.xlsx": {

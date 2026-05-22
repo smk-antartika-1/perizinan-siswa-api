@@ -4,7 +4,7 @@ import { db } from "../../config/db.js";
 
 const TEMPLATES = {
   siswa: {
-    filename: "template_import_siswa.csv",
+    filename: "template_import_siswa.xlsx",
     description: "Template import data Siswa",
     headers: ["nama", "nis", "kelas", "email", "password"],
     samples: [
@@ -19,7 +19,7 @@ const TEMPLATES = {
     ],
   },
   wali_kelas: {
-    filename: "template_import_walikelas.csv",
+    filename: "template_import_walikelas.xlsx",
     description: "Template import data Wali Kelas",
     headers: ["nama", "nip", "kelas_binaan", "email", "password"],
     samples: [
@@ -33,28 +33,33 @@ const TEMPLATES = {
     ],
   },
   guru_piket: {
-    filename: "template_import_gurupiket.csv",
+    filename: "template_import_gurupiket.xlsx",
     description: "Template import data Guru Piket",
     headers: ["nama", "nip", "email", "password"],
     samples: [["Pak Andi Wijaya", "NIP-G01", "andi@sekolah.id", "password"]],
   },
   security: {
-    filename: "template_import_security.csv",
+    filename: "template_import_security.xlsx",
     description: "Template import data Security / Penjaga Gerbang",
     headers: ["nama", "nip", "email", "password"],
     samples: [["Pak Slamet", "SCR-001", "slamet@sekolah.id", "password"]],
   },
   admin: {
-    filename: "template_import_admin.csv",
+    filename: "template_import_admin.xlsx",
     description: "Template import data Administrator",
     headers: ["nama", "nip", "email", "password"],
     samples: [["Admin IT", "ADM-001", "admin@sekolah.id", "password"]],
   },
 };
 
-function csvEscape(value) {
-  const text = value === null || value === undefined ? "" : String(value);
-  return `"${text.replaceAll('"', '""')}"`;
+function sendWorkbook(res, workbook, filename) {
+  const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(buffer);
 }
 
 function normalizeUser(row) {
@@ -281,31 +286,45 @@ export async function downloadImportTemplate(req, res, next) {
   try {
     const config = TEMPLATES[req.validated.query.role];
     if (!config) return next({ status: 400, message: "Role tidak dikenal" });
-    const lines = [
-      `# ${config.description} — E-Izin Siswa`,
-      '# Hapus baris yang diawali "#" ini sebelum mengimpor. Isi data mulai baris ke-3.',
-      config.headers.join(","),
-      ...config.samples.map((row) => row.map(csvEscape).join(",")),
-    ];
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${config.filename}"`,
+    const rows = config.samples.map((sample) =>
+      Object.fromEntries(
+        config.headers.map((header, index) => [header, sample[index] || ""]),
+      ),
     );
-    res.send(`\uFEFF${lines.join("\r\n")}`);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows, { header: config.headers });
+    XLSX.utils.sheet_add_aoa(
+      ws,
+      [[`${config.description} - E-Izin Siswa`]],
+      { origin: "G1" },
+    );
+    XLSX.utils.book_append_sheet(wb, ws, "template");
+    sendWorkbook(res, wb, config.filename);
   } catch (err) {
     next(err);
   }
 }
 
-export async function exportUsersCsv(req, res, next) {
+export async function exportUsersXlsx(req, res, next) {
   try {
     const { role } = req.validated.query;
     let query = usersBaseQuery();
     if (role !== "all") query = query.where("u.role", role);
     const rows = await query.orderBy("u.role").orderBy("u.name");
-    const lines = [
-      [
+    const suffix = role === "all" ? "semua" : role;
+    const data = rows.map((row) => ({
+      Nama: row.name,
+      Username: row.username,
+      Peran: row.role,
+      NIS: row.nis || "",
+      NIP: row.nip || "",
+      Kelas: row.student_class_name || row.homeroom_class_name || "",
+      Email: row.email || "",
+      Aktif: row.is_active ? "ya" : "tidak",
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data, {
+      header: [
         "Nama",
         "Username",
         "Peran",
@@ -314,32 +333,25 @@ export async function exportUsersCsv(req, res, next) {
         "Kelas",
         "Email",
         "Aktif",
-      ].join(","),
-      ...rows.map((row) =>
-        [
-          row.name,
-          row.username,
-          row.role,
-          row.nis || "",
-          row.nip || "",
-          row.student_class_name || row.homeroom_class_name || "",
-          row.email || "",
-          row.is_active ? "ya" : "tidak",
-        ]
-          .map(csvEscape)
-          .join(","),
-      ),
-    ];
-    const suffix = role === "all" ? "semua" : role;
-    res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="pengguna_${suffix}.csv"`,
-    );
-    res.send(`\uFEFF${lines.join("\r\n")}`);
+      ],
+    });
+    XLSX.utils.book_append_sheet(wb, ws, "pengguna");
+    sendWorkbook(res, wb, `pengguna_${suffix}.xlsx`);
   } catch (err) {
     next(err);
   }
+}
+
+export function ensureXlsxFile(req, _res, next) {
+  if (!req.file) return next();
+  const fileName = req.file?.originalname || "";
+  if (!fileName.toLowerCase().endsWith(".xlsx")) {
+    return next({
+      status: 400,
+      message: "File wajib berformat .xlsx",
+    });
+  }
+  return next();
 }
 
 function pick(row, keys) {
@@ -351,14 +363,46 @@ function pick(row, keys) {
   return "";
 }
 
+function readImportRows(filePath) {
+  const wb = XLSX.readFile(filePath);
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws);
+}
+
+function toImportPreviewRow(row, index, role) {
+  const nis = pick(row, ["nis", "NIS"]);
+  const nip = pick(row, ["nip", "NIP"]);
+  const identifier = role === "siswa" ? nis : nip;
+  return {
+    no: index + 1,
+    nama: pick(row, ["name", "nama", "Nama"]),
+    identifier,
+    kelas: pick(row, ["kelas", "class", "kelas_binaan", "Kelas", "KELAS"]),
+    email: pick(row, ["email", "Email"]),
+  };
+}
+
+export async function previewImportUsers(req, res, next) {
+  try {
+    if (!req.file)
+      return next({ status: 400, message: "File excel wajib diupload" });
+    const role = req.validated.query.role;
+    const rows = readImportRows(req.file.path);
+    res.json({
+      totalRows: rows.length,
+      rows: rows.map((row, index) => toImportPreviewRow(row, index, role)),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function importUsers(req, res, next) {
   try {
     if (!req.file)
       return next({ status: 400, message: "File excel wajib diupload" });
     const role = req.validated.query.role;
-    const wb = XLSX.readFile(req.file.path);
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws);
+    const rows = readImportRows(req.file.path);
     let inserted = 0;
     let skipped = 0;
 

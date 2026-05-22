@@ -62,8 +62,9 @@ Backend Express.js (ESM) untuk sistem perizinan siswa berbasis role.
   - `POST /api/v1/admin/users`
   - `PATCH /api/v1/admin/users/:id`
   - `DELETE /api/v1/admin/users/:id`
-  - `GET /api/v1/admin/users/export.csv`
-  - `GET /api/v1/admin/import-template.csv?role=siswa`
+  - `GET /api/v1/admin/users/export.xlsx`
+  - `GET /api/v1/admin/import-template.xlsx?role=siswa`
+  - `POST /api/v1/admin/users/import-preview.xlsx?role=siswa`
   - `POST /api/v1/admin/users/import.xlsx?role=siswa`
   - `POST /api/v1/admin/students/import.xlsx`
 

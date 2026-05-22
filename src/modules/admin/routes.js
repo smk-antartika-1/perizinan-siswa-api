@@ -6,10 +6,12 @@ import {
   createUser,
   deleteUser,
   downloadImportTemplate,
-  exportUsersCsv,
+  ensureXlsxFile,
+  exportUsersXlsx,
   importStudents,
   importUsers,
   listUsers,
+  previewImportUsers,
   updateUser,
 } from "./controller.js";
 import {
@@ -30,18 +32,31 @@ router.get("/users", validate(listUsersSchema), listUsers);
 router.post("/users", validate(createUserSchema), createUser);
 router.patch("/users/:id", validate(updateUserSchema), updateUser);
 router.delete("/users/:id", validate(deleteUserSchema), deleteUser);
-router.get("/users/export.csv", validate(exportUsersSchema), exportUsersCsv);
+router.get("/users/export.xlsx", validate(exportUsersSchema), exportUsersXlsx);
 router.get(
-  "/import-template.csv",
+  "/import-template.xlsx",
   validate(templateSchema),
   downloadImportTemplate,
 );
 router.post(
+  "/users/import-preview.xlsx",
+  upload.single("file"),
+  ensureXlsxFile,
+  validate(importUsersSchema),
+  previewImportUsers,
+);
+router.post(
   "/users/import.xlsx",
   upload.single("file"),
+  ensureXlsxFile,
   validate(importUsersSchema),
   importUsers,
 );
-router.post("/students/import.xlsx", upload.single("file"), importStudents);
+router.post(
+  "/students/import.xlsx",
+  upload.single("file"),
+  ensureXlsxFile,
+  importStudents,
+);
 
 export default router;

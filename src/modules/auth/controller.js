@@ -38,6 +38,11 @@ function sanitizeUser(user) {
   };
 }
 
+function rejectRefresh(res, next, status, message) {
+  clearAuthCookies(res);
+  return next({ status, message });
+}
+
 export async function login(req, res, next) {
   try {
     const { username, password } = req.validated.body;
@@ -51,6 +56,7 @@ export async function login(req, res, next) {
     const accessToken = signAccessToken(user);
     const refreshToken = signRefreshToken(user.id);
     await storeRefreshToken(user.id, refreshToken);
+    clearAuthCookies(res);
     setAuthCookies(res, { accessToken, refreshToken });
     res.json(withoutTokenPayload({ user: sanitizeUser(user), accessToken, refreshToken }));
   } catch (err) {
@@ -62,7 +68,7 @@ export async function refresh(req, res, next) {
   try {
     const refreshToken = readRefreshToken(req);
     if (!refreshToken)
-      return next({ status: 400, message: "refreshToken wajib" });
+      return rejectRefresh(res, next, 400, "refreshToken wajib");
     const payload = verifyRefreshToken(refreshToken);
     const tokenHash = sha256(refreshToken);
     const saved = await db("refresh_tokens")
@@ -70,21 +76,23 @@ export async function refresh(req, res, next) {
       .andWhere("expires_at", ">", new Date())
       .first();
     if (!saved)
-      return next({ status: 401, message: "Refresh token tidak valid" });
+      return rejectRefresh(res, next, 401, "Refresh token tidak valid");
     await db("refresh_tokens")
       .where({ id: saved.id })
       .update({ revoked_at: new Date() });
     const user = await db("users")
       .where({ id: payload.sub, is_active: true })
       .first();
-    if (!user) return next({ status: 401, message: "User tidak ditemukan" });
+    if (!user)
+      return rejectRefresh(res, next, 401, "User tidak ditemukan");
     const newAccess = signAccessToken(user);
     const newRefresh = signRefreshToken(user.id);
     await storeRefreshToken(user.id, newRefresh);
+    clearAuthCookies(res);
     setAuthCookies(res, { accessToken: newAccess, refreshToken: newRefresh });
     res.json(withoutTokenPayload({ accessToken: newAccess, refreshToken: newRefresh }));
   } catch {
-    next({ status: 401, message: "Refresh token tidak valid" });
+    rejectRefresh(res, next, 401, "Refresh token tidak valid");
   }
 }
 

@@ -7,13 +7,12 @@ function getStartOfToday() {
   return start;
 }
 
-async function expirePermissions() {
+export async function expirePermissions() {
   const now = new Date();
   const startOfToday = getStartOfToday();
 
   await db("permissions")
     .where({ status: "approved_piket" })
-    .andWhere("type", "=", "keluar_masuk")
     .andWhere((qb) => {
       qb.whereNotNull("estimated_return_time").andWhere(
         "estimated_return_time",

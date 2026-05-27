@@ -1,10 +1,18 @@
+export function getEndOfDepartureDay(departure) {
+  const endOfDay = new Date(departure);
+  endOfDay.setHours(23, 59, 59, 999);
+  return endOfDay;
+}
+
+export function isNoReturnPermission(row) {
+  return (
+    row.type === "pulang_tidak_kembali" ||
+    row.will_not_return === true ||
+    row.category === "sakit"
+  );
+}
+
 export function getPermissionExpiry(permissionRow) {
-  if (
-    permissionRow.type === "pulang_tidak_kembali" ||
-    permissionRow.category === "sakit"
-  ) {
-    return null;
-  }
   const estimated = permissionRow.estimated_return_time
     ? new Date(permissionRow.estimated_return_time)
     : null;
@@ -15,9 +23,7 @@ export function getPermissionExpiry(permissionRow) {
     : null;
   if (!departure || Number.isNaN(departure.valueOf())) return null;
 
-  const endOfDay = new Date(departure);
-  endOfDay.setHours(23, 59, 59, 999);
-  return endOfDay;
+  return getEndOfDepartureDay(departure);
 }
 
 export function isPermissionExpired(permissionRow, now = new Date()) {

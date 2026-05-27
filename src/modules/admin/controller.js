@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import XLSX from "xlsx";
 import { db } from "../../config/db.js";
+import { loadClassMap, normalizeClassName, resolveClassId } from "../../utils/classes.js";
 
 const TEMPLATES = {
   siswa: {
@@ -75,6 +76,7 @@ function normalizeUser(row) {
     isActive: row.is_active,
     mustChangePassword: row.must_change_password,
     kelas: row.student_class_name || row.homeroom_class_name || null,
+    classId: row.student_class_id || row.homeroom_class_id || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -99,42 +101,32 @@ function usersBaseQuery() {
       "u.must_change_password",
       "u.created_at",
       "u.updated_at",
+      "sc.id as student_class_id",
       "sc.name as student_class_name",
+      "hc.id as homeroom_class_id",
       "hc.name as homeroom_class_name",
     );
 }
 
-async function getOrCreateClass(name) {
-  const className = String(name || "").trim();
-  if (!className) return null;
-  const existing = await db("classes")
-    .whereRaw("lower(name) = lower(?)", [className])
-    .first();
-  if (existing) return existing.id;
-  const [created] = await db("classes")
-    .insert({ name: className })
-    .returning("*");
-  return created.id;
-}
-
-async function syncRoleProfiles(userId, role, className) {
+async function syncRoleProfiles(userId, role, { classId, className } = {}) {
   await db("student_profiles").where({ user_id: userId }).del();
   await db("class_homeroom_teachers").where({ teacher_user_id: userId }).del();
 
+  const resolvedClassId =
+    classId ?? (className ? await resolveClassId(className) : null);
+
   if (role === "siswa") {
-    const classId = await getOrCreateClass(className);
-    if (classId)
+    if (resolvedClassId)
       await db("student_profiles").insert({
         user_id: userId,
-        class_id: classId,
+        class_id: resolvedClassId,
       });
   }
 
   if (role === "wali_kelas") {
-    const classId = await getOrCreateClass(className);
-    if (classId) {
+    if (resolvedClassId) {
       await db("class_homeroom_teachers")
-        .insert({ class_id: classId, teacher_user_id: userId })
+        .insert({ class_id: resolvedClassId, teacher_user_id: userId })
         .onConflict(["class_id", "teacher_user_id"])
         .ignore();
     }
@@ -206,7 +198,10 @@ export async function createUser(req, res, next) {
       })
       .returning("*");
 
-    await syncRoleProfiles(user.id, body.role, body.kelas || body.className);
+    await syncRoleProfiles(user.id, body.role, {
+      classId: body.classId,
+      className: body.kelas || body.className,
+    });
     const row = await usersBaseQuery().where("u.id", user.id).first();
     res.status(201).json(normalizeUser(row));
   } catch (err) {
@@ -255,12 +250,11 @@ export async function updateUser(req, res, next) {
 
     if (Object.keys(updates).length > 0)
       await db("users").where({ id: current.id }).update(updates);
-    if (body.role || body.kelas || body.className)
-      await syncRoleProfiles(
-        current.id,
-        nextRole,
-        body.kelas || body.className,
-      );
+    if (body.role || body.kelas || body.className || body.classId)
+      await syncRoleProfiles(current.id, nextRole, {
+        classId: body.classId,
+        className: body.kelas || body.className,
+      });
 
     const row = await usersBaseQuery().where("u.id", current.id).first();
     res.json(normalizeUser(row));
@@ -369,15 +363,38 @@ function readImportRows(filePath) {
   return XLSX.utils.sheet_to_json(ws);
 }
 
-function toImportPreviewRow(row, index, role) {
+const CLASS_REQUIRED_ROLES = new Set(["siswa", "wali_kelas"]);
+
+function toImportPreviewRow(row, index, role, classMap) {
   const nis = pick(row, ["nis", "NIS"]);
   const nip = pick(row, ["nip", "NIP"]);
   const identifier = role === "siswa" ? nis : nip;
+  const kelasRaw = pick(row, ["kelas", "class", "kelas_binaan", "Kelas", "KELAS"]);
+  let kelasStatus = "not_required";
+  let classId = null;
+
+  if (CLASS_REQUIRED_ROLES.has(role)) {
+    if (!kelasRaw) {
+      kelasStatus = "missing";
+    } else {
+      const normalized = normalizeClassName(kelasRaw).toLowerCase();
+      const found = classMap.get(normalized);
+      if (found) {
+        kelasStatus = "matched";
+        classId = found;
+      } else {
+        kelasStatus = "missing";
+      }
+    }
+  }
+
   return {
     no: index + 1,
     nama: pick(row, ["name", "nama", "Nama"]),
     identifier,
-    kelas: pick(row, ["kelas", "class", "kelas_binaan", "Kelas", "KELAS"]),
+    kelas: kelasRaw,
+    kelasStatus,
+    classId,
     email: pick(row, ["email", "Email"]),
   };
 }
@@ -388,9 +405,29 @@ export async function previewImportUsers(req, res, next) {
       return next({ status: 400, message: "File excel wajib diupload" });
     const role = req.validated.query.role;
     const rows = readImportRows(req.file.path);
+    const classMap = await loadClassMap();
+    const previewRows = rows.map((row, index) =>
+      toImportPreviewRow(row, index, role, classMap),
+    );
+
+    const unknownClasses = [
+      ...new Set(
+        previewRows
+          .filter((r) => r.kelasStatus === "missing" && r.kelas)
+          .map((r) => r.kelas),
+      ),
+    ];
+    const summary = {
+      matched: previewRows.filter((r) => r.kelasStatus === "matched").length,
+      missing: previewRows.filter((r) => r.kelasStatus === "missing").length,
+      notRequired: previewRows.filter((r) => r.kelasStatus === "not_required").length,
+    };
+
     res.json({
       totalRows: rows.length,
-      rows: rows.map((row, index) => toImportPreviewRow(row, index, role)),
+      rows: previewRows,
+      unknownClasses,
+      summary,
     });
   } catch (err) {
     next(err);
@@ -403,21 +440,17 @@ export async function importUsers(req, res, next) {
       return next({ status: 400, message: "File excel wajib diupload" });
     const role = req.validated.query.role;
     const rows = readImportRows(req.file.path);
+    const classMap = await loadClassMap();
     let inserted = 0;
     let skipped = 0;
+    let skippedUnknownClass = 0;
 
     for (const row of rows) {
       const name = pick(row, ["name", "nama", "Nama"]);
       const nis = pick(row, ["nis", "NIS"]);
       const nip = pick(row, ["nip", "NIP"]);
       const username = role === "siswa" ? nis : nip;
-      const className = pick(row, [
-        "kelas",
-        "class",
-        "kelas_binaan",
-        "Kelas",
-        "KELAS",
-      ]);
+      const kelasRaw = pick(row, ["kelas", "class", "kelas_binaan", "Kelas", "KELAS"]);
       const email = pick(row, ["email", "Email"]);
       const password =
         pick(row, ["password", "Password"]) || username || "password123";
@@ -426,6 +459,17 @@ export async function importUsers(req, res, next) {
         skipped += 1;
         continue;
       }
+
+      if (CLASS_REQUIRED_ROLES.has(role)) {
+        const normalized = normalizeClassName(kelasRaw).toLowerCase();
+        const classId = normalized ? classMap.get(normalized) : null;
+        if (!classId) {
+          skipped += 1;
+          skippedUnknownClass += 1;
+          continue;
+        }
+      }
+
       const existing = await db("users")
         .whereRaw("lower(username) = lower(?)", [username])
         .first();
@@ -433,6 +477,9 @@ export async function importUsers(req, res, next) {
         skipped += 1;
         continue;
       }
+
+      const normalizedKelas = normalizeClassName(kelasRaw).toLowerCase();
+      const resolvedClassId = classMap.get(normalizedKelas) ?? null;
 
       const [user] = await db("users")
         .insert({
@@ -446,11 +493,16 @@ export async function importUsers(req, res, next) {
           must_change_password: true,
         })
         .returning("*");
-      await syncRoleProfiles(user.id, role, className);
+      await syncRoleProfiles(user.id, role, { classId: resolvedClassId });
       inserted += 1;
     }
 
-    res.json({ message: "Import selesai", inserted, skipped });
+    res.json({
+      message: "Import selesai",
+      inserted,
+      skipped,
+      skippedReasons: { unknownClass: skippedUnknownClass },
+    });
   } catch (err) {
     next(err);
   }

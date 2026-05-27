@@ -1,4 +1,10 @@
 import { db } from "../../config/db.js";
+import {
+  getStoredUploadPath,
+  removeUploadedFile,
+  uploadPublicUrl,
+  UPLOAD_SUBDIRS,
+} from "../../utils/uploads.js";
 
 export async function getProfile(req, res) {
   let className = null;
@@ -29,7 +35,7 @@ export async function getProfile(req, res) {
     email: req.user.email,
     nis: req.user.nis,
     nip: req.user.nip,
-    avatarUrl: req.user.avatar_url,
+    avatarUrl: uploadPublicUrl(req.user.avatar_url),
     className,
     nopol,
   });
@@ -38,7 +44,14 @@ export async function getProfile(req, res) {
 export async function updateProfile(req, res, next) {
   try {
     const updates = {};
-    if (req.file) updates.avatar_url = req.file.filename;
+    if (req.file) {
+      const avatarPath = getStoredUploadPath(
+        UPLOAD_SUBDIRS.avatars,
+        req.file.filename,
+      );
+      if (req.user.avatar_url) await removeUploadedFile(req.user.avatar_url);
+      updates.avatar_url = avatarPath;
+    }
     if (Object.keys(updates).length > 0)
       await db("users").where({ id: req.user.id }).update(updates);
     if (req.user.role === "siswa" && typeof req.body.nopol === "string") {

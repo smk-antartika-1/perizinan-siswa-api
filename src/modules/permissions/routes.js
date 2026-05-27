@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRoles } from "../../middlewares/auth.js";
 import { validate } from "../../middlewares/validate.js";
-import { upload } from "../files/upload.js";
+import { uploadPermissionDocument } from "../files/upload.js";
 import {
   addComment,
   approveByPiket,
@@ -70,7 +70,7 @@ router.patch(
 router.post(
   "/:id/document",
   requireRoles("guru_piket", "admin"),
-  upload.single("document"),
+  uploadPermissionDocument.single("document"),
   uploadDocument,
 );
 router.post(

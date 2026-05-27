@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRoles } from "../../middlewares/auth.js";
 import { validate } from "../../middlewares/validate.js";
-import { upload } from "../files/upload.js";
+import { uploadImport } from "../files/upload.js";
 import {
   createUser,
   deleteUser,
@@ -43,21 +43,21 @@ router.get(
 );
 router.post(
   "/users/import-preview.xlsx",
-  upload.single("file"),
+  uploadImport.single("file"),
   ensureXlsxFile,
   validate(importUsersSchema),
   previewImportUsers,
 );
 router.post(
   "/users/import.xlsx",
-  upload.single("file"),
+  uploadImport.single("file"),
   ensureXlsxFile,
   validate(importUsersSchema),
   importUsers,
 );
 router.post(
   "/students/import.xlsx",
-  upload.single("file"),
+  uploadImport.single("file"),
   ensureXlsxFile,
   importStudents,
 );

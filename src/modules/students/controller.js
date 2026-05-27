@@ -1,4 +1,5 @@
 import { db } from "../../config/db.js";
+import { uploadPublicUrl } from "../../utils/uploads.js";
 
 export async function getStudentByNis(req, res, next) {
   try {
@@ -38,7 +39,7 @@ export async function getStudentByNis(req, res, next) {
       nis: student.nis,
       kelas: student.class_name,
       nopol: student.nopol,
-      avatarUrl: student.avatar_url,
+      avatarUrl: uploadPublicUrl(student.avatar_url),
       waliKelas: student.wali_id ? { id: student.wali_id, name: student.wali_name } : null,
       activePermission: permissions.find((item) => item.status === "approved_piket") || null,
       recentPermissions: permissions,

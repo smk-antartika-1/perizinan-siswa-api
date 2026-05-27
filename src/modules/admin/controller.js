@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import XLSX from "xlsx";
 import { db } from "../../config/db.js";
 import { loadClassMap, normalizeClassName, resolveClassId } from "../../utils/classes.js";
+import { removeTempUploadFile, uploadPublicUrl } from "../../utils/uploads.js";
 
 const TEMPLATES = {
   siswa: {
@@ -72,7 +73,7 @@ function normalizeUser(row) {
     email: row.email,
     nis: row.nis,
     nip: row.nip,
-    avatarUrl: row.avatar_url,
+    avatarUrl: uploadPublicUrl(row.avatar_url),
     isActive: row.is_active,
     mustChangePassword: row.must_change_password,
     kelas: row.student_class_name || row.homeroom_class_name || null,
@@ -509,6 +510,8 @@ export async function previewImportUsers(req, res, next) {
     });
   } catch (err) {
     next(err);
+  } finally {
+    await removeTempUploadFile(req.file);
   }
 }
 
@@ -583,6 +586,8 @@ export async function importUsers(req, res, next) {
     });
   } catch (err) {
     next(err);
+  } finally {
+    await removeTempUploadFile(req.file);
   }
 }
 

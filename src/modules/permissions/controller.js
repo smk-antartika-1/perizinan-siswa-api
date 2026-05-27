@@ -5,6 +5,11 @@ import {
   getPermissionExpiry,
   isPermissionExpired,
 } from "../../utils/permissions.js";
+import {
+  getStoredUploadPath,
+  uploadPublicUrl,
+  UPLOAD_SUBDIRS,
+} from "../../utils/uploads.js";
 
 const STATUS_TO_FRONTEND = {
   pending_wali: "pending",
@@ -175,9 +180,7 @@ async function serializePermission(row, includeExtras = true) {
     willNotReturn: row.will_not_return,
     nomorPolisi: row.nomor_polisi,
     category: row.category || "keperluan",
-    documentUrl: row.document_path
-      ? `${env.appUrl}/uploads/${row.document_path}`
-      : null,
+    documentUrl: uploadPublicUrl(row.document_path),
     suratUrl: `${env.appUrl}/api/v1/permissions/${row.id}/surat`,
     comments: extras.comments,
     auditLog,
@@ -443,16 +446,22 @@ export async function uploadDocument(req, res, next) {
       .first();
     if (!permission)
       return next({ status: 404, message: "Perizinan tidak ditemukan" });
+    const storedPath = getStoredUploadPath(
+      UPLOAD_SUBDIRS.permissions,
+      req.file.filename,
+    );
     await db("permission_documents").insert({
       permission_id: permission.id,
-      file_path: req.file.filename,
+      file_path: storedPath,
       mime_type: req.file.mimetype,
       file_size: req.file.size,
       uploaded_by_user_id: req.user.id,
     });
-    res
-      .status(201)
-      .json({ message: "Dokumen berhasil diupload", file: req.file.filename });
+    res.status(201).json({
+      message: "Dokumen berhasil diupload",
+      file: storedPath,
+      documentUrl: uploadPublicUrl(storedPath),
+    });
   } catch (err) {
     next(err);
   }

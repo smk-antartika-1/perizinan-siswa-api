@@ -133,43 +133,114 @@ async function syncRoleProfiles(userId, role, { classId, className } = {}) {
   }
 }
 
+function applyUserListFilters(query, { role, classId, search }) {
+  if (role && role !== "all") query = query.where("u.role", role);
+  if (classId) {
+    query = query.where((builder) => {
+      builder
+        .where("sp.class_id", classId)
+        .orWhere("cht.class_id", classId);
+    });
+  }
+  if (search) {
+    const term = `%${search.toLowerCase()}%`;
+    query = query.where((builder) => {
+      builder
+        .whereRaw("lower(u.name) like ?", [term])
+        .orWhereRaw("lower(u.username) like ?", [term])
+        .orWhereRaw("lower(coalesce(u.nis, '')) like ?", [term])
+        .orWhereRaw("lower(coalesce(u.nip, '')) like ?", [term])
+        .orWhereRaw("lower(coalesce(u.email, '')) like ?", [term])
+        .orWhereRaw("lower(coalesce(sc.name, '')) like ?", [term])
+        .orWhereRaw("lower(coalesce(hc.name, '')) like ?", [term]);
+    });
+  }
+  return query;
+}
+
+const SORT_COLUMNS = {
+  name: "u.name",
+  username: "u.username",
+  created_at: "u.created_at",
+};
+
+/** Admin → Guru Piket → Security → Wali Kelas → Siswa */
+const ROLE_SORT_SQL = `
+  CASE u.role
+    WHEN 'admin' THEN 1
+    WHEN 'guru_piket' THEN 2
+    WHEN 'security' THEN 3
+    WHEN 'wali_kelas' THEN 4
+    WHEN 'siswa' THEN 5
+    ELSE 6
+  END
+`;
+
+function applyUserListSort(query, { sort, order }) {
+  if (sort === "role") {
+    const direction = order === "desc" ? "DESC" : "ASC";
+    return query
+      .orderByRaw(`${ROLE_SORT_SQL} ${direction}`)
+      .orderBy("u.name", "asc");
+  }
+  const sortColumn = SORT_COLUMNS[sort] || SORT_COLUMNS.name;
+  return query.orderBy(sortColumn, order);
+}
+
 export async function listUsers(req, res, next) {
   try {
-    const { role, search, page, limit } = req.validated.query;
+    const { role, classId, search, page, limit, sort, order } =
+      req.validated.query;
     let query = usersBaseQuery();
-
-    if (role && role !== "all") query = query.where("u.role", role);
-    if (search) {
-      const term = `%${search.toLowerCase()}%`;
-      query = query.where((builder) => {
-        builder
-          .whereRaw("lower(u.name) like ?", [term])
-          .orWhereRaw("lower(u.username) like ?", [term])
-          .orWhereRaw("lower(coalesce(u.nis, '')) like ?", [term])
-          .orWhereRaw("lower(coalesce(u.nip, '')) like ?", [term])
-          .orWhereRaw("lower(coalesce(u.email, '')) like ?", [term]);
-      });
-    }
+    query = applyUserListFilters(query, { role, classId, search });
 
     const [{ count }] = await query
       .clone()
       .clearSelect()
       .clearOrder()
       .countDistinct("u.id as count");
+
+    query = applyUserListSort(query, { sort, order });
     const rows = await query
-      .orderBy("u.created_at", "desc")
       .limit(limit)
       .offset((page - 1) * limit);
 
+    const total = Number(count);
     res.json({
       data: rows.map(normalizeUser),
       meta: {
         page,
         limit,
-        total: Number(count),
-        totalPages: Math.ceil(Number(count) / limit),
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getUserStats(req, res, next) {
+  try {
+    const { classId } = req.validated.query;
+    let query = usersBaseQuery();
+    query = applyUserListFilters(query, { classId, role: null, search: null });
+
+    const rows = await query
+      .clone()
+      .clearSelect()
+      .clearOrder()
+      .select("u.role")
+      .countDistinct("u.id as count")
+      .groupBy("u.role");
+
+    const byRole = rows.reduce((acc, row) => {
+      acc[row.role] = Number(row.count);
+      return acc;
+    }, {});
+
+    const total = Object.values(byRole).reduce((sum, n) => sum + n, 0);
+    res.json({ total, byRole });
   } catch (err) {
     next(err);
   }
@@ -265,6 +336,13 @@ export async function updateUser(req, res, next) {
 
 export async function deleteUser(req, res, next) {
   try {
+    if (req.user?.id === req.validated.params.id) {
+      return next({
+        status: 403,
+        message: "Tidak dapat menghapus akun Anda sendiri",
+      });
+    }
+
     const updated = await db("users")
       .where({ id: req.validated.params.id })
       .update({ is_active: false, updated_at: new Date() });

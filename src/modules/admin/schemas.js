@@ -7,9 +7,20 @@ export const listUsersSchema = z.object({
   body: z.any(),
   query: z.object({
     role: z.union([roleEnum, z.literal("all")]).optional(),
+    classId: z.string().uuid().optional(),
     search: z.string().trim().optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
+    sort: z.enum(["name", "username", "role", "created_at"]).default("role"),
+    order: z.enum(["asc", "desc"]).default("asc"),
+  }),
+  params: z.any(),
+});
+
+export const userStatsSchema = z.object({
+  body: z.any(),
+  query: z.object({
+    classId: z.string().uuid().optional(),
   }),
   params: z.any(),
 });

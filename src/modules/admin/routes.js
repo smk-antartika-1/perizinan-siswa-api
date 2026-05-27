@@ -10,6 +10,7 @@ import {
   exportUsersXlsx,
   importStudents,
   importUsers,
+  getUserStats,
   listUsers,
   previewImportUsers,
   updateUser,
@@ -22,12 +23,14 @@ import {
   listUsersSchema,
   templateSchema,
   updateUserSchema,
+  userStatsSchema,
 } from "./schemas.js";
 
 const router = Router();
 
 router.use(requireAuth, requireRoles("admin"));
 
+router.get("/users/stats", validate(userStatsSchema), getUserStats);
 router.get("/users", validate(listUsersSchema), listUsers);
 router.post("/users", validate(createUserSchema), createUser);
 router.patch("/users/:id", validate(updateUserSchema), updateUser);

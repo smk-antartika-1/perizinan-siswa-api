@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRoles } from "../../middlewares/auth.js";
 import {
+  listScannedPermissions,
   markNoReturn,
   markReturned,
   reopenPermission,
@@ -15,8 +16,20 @@ export const RETURN_MANAGEMENT_ROLES = [
   "wali_kelas",
   "admin",
 ];
+export const SCAN_MANAGEMENT_ROLES = ["security", "admin"];
 
-router.get("/scan/:token", scanQr);
+router.get(
+  "/scan/:token",
+  requireAuth,
+  requireRoles(...SCAN_MANAGEMENT_ROLES),
+  scanQr,
+);
+router.get(
+  "/scanned-permissions",
+  requireAuth,
+  requireRoles(...SCAN_MANAGEMENT_ROLES),
+  listScannedPermissions,
+);
 router.patch(
   "/permissions/:id/return",
   requireAuth,

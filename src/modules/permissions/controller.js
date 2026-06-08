@@ -474,13 +474,28 @@ export async function generateQr(req, res, next) {
       .first();
     if (!permission)
       return next({ status: 404, message: "Perizinan tidak ditemukan" });
+    if (permission.status !== "approved_piket" || isPermissionExpired(permission)) {
+      return next({
+        status: 403,
+        message: "QR hanya dapat dibuat untuk izin aktif.",
+      });
+    }
     const token = signQrToken({ permissionId: permission.id });
     const expiresAt = new Date(Date.now() + env.qrTokenTtlMinutes * 60000);
-    await db("permission_qr_tokens").insert({
-      permission_id: permission.id,
-      token_hash: sha256(token),
-      expires_at: expiresAt,
-      generated_by_user_id: req.user.id,
+    await db.transaction(async (trx) => {
+      await trx("permission_qr_tokens")
+        .where({
+          permission_id: permission.id,
+          revoked_at: null,
+          used_at: null,
+        })
+        .update({ revoked_at: new Date() });
+      await trx("permission_qr_tokens").insert({
+        permission_id: permission.id,
+        token_hash: sha256(token),
+        expires_at: expiresAt,
+        generated_by_user_id: req.user.id,
+      });
     });
     const qrUrl = `${env.appUrl}/api/v1/security/scan/${token}`;
     res.json({

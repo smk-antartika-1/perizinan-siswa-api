@@ -75,7 +75,6 @@ router.post(
 );
 router.post(
   "/:id/qr",
-  requireRoles("guru_piket", "admin"),
   validate(idParamSchema),
   generateQr,
 );

@@ -1,4 +1,21 @@
 const authSecurity = [{ bearerAuth: [] }];
+const publicServerUrl = "https://202.134.242.37";
+
+function buildServers() {
+  const servers = [
+    {
+      url: process.env.APP_URL || publicServerUrl,
+      description: "Configured server",
+    },
+    { url: publicServerUrl, description: "Production VPS" },
+    { url: "http://localhost:8000", description: "Local development" },
+  ];
+
+  return servers.filter(
+    (server, index) =>
+      servers.findIndex((candidate) => candidate.url === server.url) === index,
+  );
+}
 
 const uuidPathParam = (name = "id") => ({
   in: "path",
@@ -24,7 +41,7 @@ export const openApiSpec = {
     description:
       "Dokumentasi API untuk sistem perizinan siswa multi-role. Termasuk seluruh API yang dibutuhkan frontend.",
   },
-  servers: [{ url: "http://localhost:8000", description: "Local development" }],
+  servers: buildServers(),
   tags: [
     { name: "Health" },
     { name: "Auth" },

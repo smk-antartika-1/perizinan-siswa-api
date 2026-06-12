@@ -50,7 +50,6 @@ services:
       - api
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env to your public domain}
-      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env}
       ACME_PROFILE: ${ACME_PROFILE:-shortlived}
     ports:
       - "${HTTP_PORT:-80}:80"

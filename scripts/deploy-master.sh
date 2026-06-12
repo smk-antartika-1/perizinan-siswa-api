@@ -4,7 +4,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-BRANCH="${DEPLOY_BRANCH:-main}"
+BRANCH="${DEPLOY_BRANCH:-master}"
 REMOTE="${DEPLOY_REMOTE:-origin}"
 SERVICE="${DEPLOY_SERVICE:-api}"
 
@@ -44,6 +44,7 @@ echo "Deploying ${REMOTE}/${BRANCH}: ${local_sha} -> ${remote_sha}"
 git pull --ff-only "${REMOTE}" "${BRANCH}"
 
 compose build --pull "${SERVICE}"
+compose up -d db
 compose run --rm "${SERVICE}" pnpm migrate
 compose up -d --force-recreate --remove-orphans
 

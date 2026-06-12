@@ -5,7 +5,7 @@ export const REFRESH_COOKIE = "refresh_token";
 
 const baseCookieOptions = {
   httpOnly: true,
-  sameSite: "lax",
+  sameSite: env.cookieSameSite,
   secure: env.nodeEnv === "production",
   path: "/",
 };

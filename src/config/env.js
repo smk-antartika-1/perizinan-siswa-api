@@ -20,6 +20,11 @@ const expiryIntervalMinutes = Number(
   process.env.PERMISSION_EXPIRY_INTERVAL_MINUTES || 5,
 );
 
+const corsOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 export const env = {
   port: Number(process.env.PORT || 8000),
   nodeEnv: process.env.NODE_ENV || "development",
@@ -35,4 +40,6 @@ export const env = {
     : 5,
   uploadDir: process.env.UPLOAD_DIR || "uploads",
   appUrl: process.env.APP_URL || "http://127.0.0.1:8000",
+  corsOrigins,
+  cookieSameSite: process.env.COOKIE_SAME_SITE || "lax",
 };

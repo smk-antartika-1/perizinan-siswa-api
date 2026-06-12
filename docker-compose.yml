@@ -1,10 +1,33 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: perizinan-siswa-api-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-perizinan_siswa}
+      POSTGRES_USER: ${POSTGRES_USER:-sipas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-sipas} -d $${POSTGRES_DB:-perizinan_siswa}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
     image: perizinan-siswa-api:latest
     container_name: perizinan-siswa-api
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -35,5 +58,6 @@ services:
       - caddy_config:/config
 
 volumes:
+  postgres_data:
   caddy_data:
   caddy_config:

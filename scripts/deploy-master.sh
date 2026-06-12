@@ -4,7 +4,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-BRANCH="${DEPLOY_BRANCH:-master}"
+BRANCH="${DEPLOY_BRANCH:-main}"
 REMOTE="${DEPLOY_REMOTE:-origin}"
 SERVICE="${DEPLOY_SERVICE:-api}"
 
@@ -45,6 +45,6 @@ git pull --ff-only "${REMOTE}" "${BRANCH}"
 
 compose build --pull "${SERVICE}"
 compose run --rm "${SERVICE}" pnpm migrate
-compose up -d --force-recreate --remove-orphans "${SERVICE}"
+compose up -d --force-recreate --remove-orphans
 
 echo "Deployment complete without database reset."

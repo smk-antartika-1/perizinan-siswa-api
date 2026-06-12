@@ -12,6 +12,8 @@ import { openApiSpec } from "./docs/openapi.js";
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 app.use(
   helmet({
     hsts: env.nodeEnv === "production",

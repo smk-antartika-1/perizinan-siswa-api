@@ -34,6 +34,7 @@ services:
       NODE_ENV: production
       PORT: 8000
       UPLOAD_DIR: /app/uploads
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sipas}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@${POSTGRES_HOST:-db}:5432/${POSTGRES_DB:-perizinan_siswa}
     expose:
       - "8000"
     volumes:

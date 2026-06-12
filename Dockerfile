@@ -2,8 +2,7 @@ FROM node:22-alpine AS deps
 
 WORKDIR /app
 
-RUN corepack enable \
-  && corepack prepare pnpm@10.33.0 --activate
+RUN npm install -g pnpm@10.33.0
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile
@@ -16,8 +15,7 @@ ENV UPLOAD_DIR=/app/uploads
 
 WORKDIR /app
 
-RUN corepack enable \
-  && corepack prepare pnpm@10.33.0 --activate
+RUN npm install -g pnpm@10.33.0
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-lock.yaml knexfile.js ./

@@ -38,7 +38,7 @@ services:
     expose:
       - "8000"
     volumes:
-      - ./uploads:/app/uploads
+      - uploads_data:/app/uploads
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -61,5 +61,6 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
   caddy_data:
   caddy_config:

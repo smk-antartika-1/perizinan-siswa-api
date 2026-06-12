@@ -1,0 +1,12 @@
+.env
+.env.*
+.git
+.gitignore
+Dockerfile
+docker-compose*.yml
+node_modules
+npm-debug.log*
+pnpm-debug.log*
+uploads
+coverage
+.DS_Store

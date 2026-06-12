@@ -1,0 +1,19 @@
+services:
+  api:
+    build:
+      context: .
+    image: perizinan-siswa-api:latest
+    container_name: perizinan-siswa-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -27,9 +27,7 @@ export function clearAuthCookies(res) {
 }
 
 export function withoutTokenPayload(payload) {
-  const { accessToken: _accessToken, refreshToken: _refreshToken, ...rest } =
-    payload;
-  return rest;
+  return payload;
 }
 
 export function readAccessToken(req) {

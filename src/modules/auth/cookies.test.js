@@ -59,13 +59,14 @@ test("clearAuthCookies clears both auth cookies", () => {
   );
 });
 
-test("withoutTokenPayload removes tokens from response body", () => {
+test("withoutTokenPayload keeps tokens in response body", () => {
+  const data = {
+    user: { username: "siswa" },
+    accessToken: "access-token",
+    refreshToken: "refresh-token",
+  };
   assert.deepEqual(
-    withoutTokenPayload({
-      user: { username: "siswa" },
-      accessToken: "access-token",
-      refreshToken: "refresh-token",
-    }),
-    { user: { username: "siswa" } },
+    withoutTokenPayload(data),
+    data
   );
 });
